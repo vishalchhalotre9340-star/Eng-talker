@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Content, GenerateContentResponse } from "@google/genai";
-import { AdminStats, DashboardData, ChatMessage } from "../../../types";
+import { AdminStats, DashboardData, ChatMessage } from "../types";
 
 let ai: GoogleGenAI | null = null;
 
@@ -21,9 +21,18 @@ const buildHistory = (history: ChatMessage[]): Content[] => {
     }));
 };
 
+const requireText = (response: GenerateContentResponse): string => {
+    if (!response.text) {
+        throw new Error("Gemini returned an empty text response.");
+    }
+    return response.text;
+};
+
 const textToStream = async function*(result: AsyncIterable<GenerateContentResponse>): AsyncGenerator<string> {
     for await (const chunk of result) {
-        yield chunk.text;
+        if (chunk.text) {
+            yield chunk.text;
+        }
     }
 };
 
@@ -146,7 +155,7 @@ export const generateSocialPost = async (topic: string): Promise<string> => {
         model: 'gemini-2.5-flash',
         contents: prompt,
     });
-    return result.text;
+    return requireText(result);
 };
 
 export const draftNewsletter = async (topic: string, audience: string): Promise<string> => {
@@ -164,7 +173,7 @@ export const draftNewsletter = async (topic: string, audience: string): Promise<
         model: 'gemini-2.5-flash',
         contents: prompt,
     });
-    return result.text;
+    return requireText(result);
 };
 
 export const generateImage = async (prompt: string): Promise<string> => {
@@ -178,8 +187,8 @@ export const generateImage = async (prompt: string): Promise<string> => {
         },
     });
 
-    if (response.generatedImages && response.generatedImages.length > 0) {
-        const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
+    const base64ImageBytes = response.generatedImages?.[0]?.image?.imageBytes;
+    if (base64ImageBytes) {
         return `data:image/jpeg;base64,${base64ImageBytes}`;
     }
     throw new Error("Sorry, I couldn't generate an image. The response was empty.");
@@ -227,14 +236,14 @@ export const generateClientDashboardData = async (clientName: string, plan: stri
         }
     });
 
-    const jsonStr = response.text.trim();
+    const jsonStr = requireText(response).trim();
     return JSON.parse(jsonStr) as DashboardData;
 };
 
 export const generateAdminDashboardStats = async (): Promise<AdminStats> => {
     const prompt = `You are the backend for Amunet AI. Generate a realistic JSON object for the admin dashboard stats. The JSON should include activeClients (a number between 1000 and 1500), platformStatus ('All Systems Online'), and aiInteractionsToday (a number between 30000 and 50000).`;
 
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
         config: {
@@ -251,6 +260,6 @@ export const generateAdminDashboardStats = async (): Promise<AdminStats> => {
         }
     });
     
-    const jsonStr = response.text.trim();
+    const jsonStr = requireText(response).trim();
     return JSON.parse(jsonStr) as AdminStats;
 };

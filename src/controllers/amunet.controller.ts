@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import * as geminiService from '../services/gemini.service';
-import { ChatMessage } from '../../../types';
+import { ChatMessage } from '../types';
 
 // Generic error handler
 const handleError = (res: Response, error: unknown, defaultMessage: string) => {
