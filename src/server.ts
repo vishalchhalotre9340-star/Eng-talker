@@ -11,11 +11,12 @@ const port = process.env.PORT || 3001;
 
 // Restrict CORS to a specific origin for better security
 const corsOptions = {
-  origin: 'https://app.amunet.ai',
-  credentials: true, // Allows cookies to be sent
+  origin: process.env.CLIENT_ORIGIN,
+  credentials: true,
 };
 
 app.use(cors(corsOptions));
+
 app.use(express.json());
 
 app.use('/api', apiRoutes);
